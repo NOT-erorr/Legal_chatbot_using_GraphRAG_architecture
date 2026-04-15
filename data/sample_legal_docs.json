@@ -1,0 +1,206 @@
+{
+  "documents": [
+    {
+      "so_ky_hieu": "45/2019/QH14",
+      "title": "Bộ luật Lao động",
+      "loai_van_ban": "Luật",
+      "nganh": "Lao động - Thương binh và Xã hội",
+      "linh_vuc": "Lao động",
+      "co_quan_ban_hanh": "Quốc hội",
+      "ngay_ban_hanh": "2019-11-20",
+      "tinh_trang_hieu_luc": "Còn hiệu lực",
+      "content_html": null,
+      "content_text": "",
+      "chunks": [
+        {
+          "chunk_id": "45_2019_QH14__chunk_000",
+          "chapter": "Chương I",
+          "article": "Điều 1",
+          "content": "Bộ luật Lao động quy định tiêu chuẩn lao động; quyền, nghĩa vụ, trách nhiệm của người lao động, người sử dụng lao động, tổ chức đại diện người lao động tại cơ sở, tổ chức đại diện người sử dụng lao động trong quan hệ lao động và các quan hệ khác liên quan trực tiếp đến quan hệ lao động; quản lý nhà nước về lao động."
+        },
+        {
+          "chunk_id": "45_2019_QH14__chunk_001",
+          "chapter": "Chương I",
+          "article": "Điều 2",
+          "content": "Bộ luật này áp dụng đối với người lao động, người học nghề, người tập nghề và người làm việc không có quan hệ lao động; người sử dụng lao động; người lao động nước ngoài làm việc tại Việt Nam; cơ quan, tổ chức, cá nhân khác có liên quan trực tiếp đến quan hệ lao động."
+        },
+        {
+          "chunk_id": "45_2019_QH14__chunk_002",
+          "chapter": "Chương III",
+          "article": "Điều 20",
+          "content": "Hợp đồng lao động phải được giao kết theo một trong các loại sau đây: Hợp đồng lao động không xác định thời hạn là hợp đồng mà trong đó hai bên không xác định thời hạn, thời điểm chấm dứt hiệu lực của hợp đồng; Hợp đồng lao động xác định thời hạn là hợp đồng mà trong đó hai bên xác định thời hạn, thời điểm chấm dứt hiệu lực của hợp đồng trong thời gian không quá 36 tháng kể từ thời điểm có hiệu lực của hợp đồng."
+        },
+        {
+          "chunk_id": "45_2019_QH14__chunk_003",
+          "chapter": "Chương III",
+          "article": "Điều 24",
+          "content": "Thử việc: Người sử dụng lao động và người lao động có thể thỏa thuận nội dung thử việc ghi trong hợp đồng lao động hoặc thỏa thuận về thử việc bằng việc giao kết hợp đồng thử việc. Không áp dụng thử việc đối với người lao động giao kết hợp đồng lao động có thời hạn dưới 01 tháng."
+        },
+        {
+          "chunk_id": "45_2019_QH14__chunk_004",
+          "chapter": "Chương VI",
+          "article": "Điều 89",
+          "content": "Tiền lương tính đóng bảo hiểm xã hội bắt buộc là tiền lương tháng bao gồm mức lương, phụ cấp lương và các khoản bổ sung khác theo quy định của pháp luật về lao động. Người sử dụng lao động có trách nhiệm đóng bảo hiểm xã hội bắt buộc cho người lao động kể từ ngày hợp đồng lao động có hiệu lực."
+        },
+        {
+          "chunk_id": "45_2019_QH14__chunk_005",
+          "chapter": "Chương X",
+          "article": "Điều 168",
+          "content": "Nhà nước khuyến khích người sử dụng lao động, người lao động tham gia các hình thức bảo hiểm khác đối với người lao động. Việc thực hiện chế độ bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp theo quy định của pháp luật về bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp."
+        }
+      ],
+      "relations": [
+        {
+          "target_so_ky_hieu": "58/2014/QH13",
+          "type": "REFERENCES",
+          "description": "Bộ luật Lao động dẫn chiếu đến Luật Bảo hiểm xã hội về chế độ BHXH"
+        }
+      ]
+    },
+    {
+      "so_ky_hieu": "145/2020/NĐ-CP",
+      "title": "Nghị định quy định chi tiết và hướng dẫn thi hành một số điều của Bộ luật Lao động về điều kiện lao động và quan hệ lao động",
+      "loai_van_ban": "Nghị định",
+      "nganh": "Lao động - Thương binh và Xã hội",
+      "linh_vuc": "Lao động",
+      "co_quan_ban_hanh": "Chính phủ",
+      "ngay_ban_hanh": "2020-12-14",
+      "tinh_trang_hieu_luc": "Còn hiệu lực",
+      "chunks": [
+        {
+          "chunk_id": "145_2020_ND-CP__chunk_000",
+          "chapter": "Chương I",
+          "article": "Điều 1",
+          "content": "Nghị định này quy định chi tiết và hướng dẫn thi hành một số điều của Bộ luật Lao động số 45/2019/QH14 về điều kiện lao động và quan hệ lao động, bao gồm: quản lý lao động; hợp đồng lao động; cho thuê lại lao động; thời giờ làm việc, thời giờ nghỉ ngơi; kỷ luật lao động, trách nhiệm vật chất."
+        },
+        {
+          "chunk_id": "145_2020_ND-CP__chunk_001",
+          "chapter": "Chương II",
+          "article": "Điều 7",
+          "content": "Nội dung hợp đồng lao động: Hợp đồng lao động phải có các nội dung chủ yếu sau: tên, địa chỉ của người sử dụng lao động; họ tên, ngày tháng năm sinh, giới tính, nơi cư trú, số thẻ Căn cước công dân hoặc Chứng minh nhân dân; công việc và địa điểm làm việc; thời hạn hợp đồng; mức lương theo công việc hoặc chức danh."
+        },
+        {
+          "chunk_id": "145_2020_ND-CP__chunk_002",
+          "chapter": "Chương II",
+          "article": "Điều 8",
+          "content": "Thời gian thử việc: Thời gian thử việc do hai bên thỏa thuận căn cứ vào tính chất và mức độ phức tạp của công việc nhưng chỉ được thử việc một lần đối với một công việc và bảo đảm điều kiện: không quá 180 ngày đối với công việc của người quản lý doanh nghiệp; không quá 60 ngày đối với công việc có chức danh nghề cần trình độ chuyên môn, kỹ thuật từ cao đẳng trở lên; không quá 30 ngày đối với công việc có chức danh nghề cần trình độ trung cấp; không quá 6 ngày làm việc đối với công việc khác."
+        }
+      ],
+      "relations": [
+        {
+          "target_so_ky_hieu": "45/2019/QH14",
+          "type": "GUIDES",
+          "description": "Nghị định 145/2020 hướng dẫn thi hành Bộ luật Lao động 2019"
+        }
+      ]
+    },
+    {
+      "so_ky_hieu": "135/2020/NĐ-CP",
+      "title": "Nghị định quy định về tuổi nghỉ hưu",
+      "loai_van_ban": "Nghị định",
+      "nganh": "Lao động - Thương binh và Xã hội",
+      "linh_vuc": "Bảo hiểm xã hội",
+      "co_quan_ban_hanh": "Chính phủ",
+      "ngay_ban_hanh": "2020-11-18",
+      "tinh_trang_hieu_luc": "Còn hiệu lực",
+      "chunks": [
+        {
+          "chunk_id": "135_2020_ND-CP__chunk_000",
+          "article": "Điều 1",
+          "content": "Nghị định này quy định về tuổi nghỉ hưu theo Điều 169 Bộ luật Lao động số 45/2019/QH14, bao gồm: tuổi nghỉ hưu trong điều kiện lao động bình thường; tuổi nghỉ hưu trong trường hợp suy giảm khả năng lao động; tuổi nghỉ hưu đối với một số trường hợp đặc biệt."
+        },
+        {
+          "chunk_id": "135_2020_ND-CP__chunk_001",
+          "article": "Điều 2",
+          "content": "Tuổi nghỉ hưu của người lao động trong điều kiện lao động bình thường: Kể từ năm 2021, tuổi nghỉ hưu của người lao động trong điều kiện lao động bình thường là đủ 60 tuổi 3 tháng đối với lao động nam và đủ 55 tuổi 4 tháng đối với lao động nữ; sau đó cứ mỗi năm tăng thêm 3 tháng đối với lao động nam cho đến khi đủ 62 tuổi vào năm 2028 và tăng thêm 4 tháng đối với lao động nữ cho đến khi đủ 60 tuổi vào năm 2035."
+        }
+      ],
+      "relations": [
+        {
+          "target_so_ky_hieu": "45/2019/QH14",
+          "type": "GUIDES",
+          "description": "Nghị định 135/2020 hướng dẫn về tuổi nghỉ hưu theo BLLĐ 2019"
+        },
+        {
+          "target_so_ky_hieu": "58/2014/QH13",
+          "type": "REFERENCES",
+          "description": "Dẫn chiếu Luật BHXH về chế độ hưu trí"
+        }
+      ]
+    },
+    {
+      "so_ky_hieu": "58/2014/QH13",
+      "title": "Luật Bảo hiểm xã hội",
+      "loai_van_ban": "Luật",
+      "nganh": "Lao động - Thương binh và Xã hội",
+      "linh_vuc": "Bảo hiểm xã hội",
+      "co_quan_ban_hanh": "Quốc hội",
+      "ngay_ban_hanh": "2014-11-20",
+      "tinh_trang_hieu_luc": "Còn hiệu lực",
+      "chunks": [
+        {
+          "chunk_id": "58_2014_QH13__chunk_000",
+          "chapter": "Chương I",
+          "article": "Điều 1",
+          "content": "Luật này quy định chế độ, chính sách bảo hiểm xã hội; quyền và trách nhiệm của người lao động, người sử dụng lao động; cơ quan, tổ chức, cá nhân có liên quan đến bảo hiểm xã hội; tổ chức, hoạt động của cơ quan bảo hiểm xã hội; quỹ bảo hiểm xã hội; thủ tục thực hiện bảo hiểm xã hội và quản lý nhà nước về bảo hiểm xã hội."
+        },
+        {
+          "chunk_id": "58_2014_QH13__chunk_001",
+          "chapter": "Chương I",
+          "article": "Điều 2",
+          "content": "Đối tượng áp dụng bảo hiểm xã hội bắt buộc bao gồm: người làm việc theo hợp đồng lao động không xác định thời hạn, hợp đồng lao động xác định thời hạn từ đủ 01 tháng trở lên; cán bộ, công chức, viên chức; công nhân quốc phòng, công nhân công an, người làm công tác khác trong tổ chức cơ yếu."
+        },
+        {
+          "chunk_id": "58_2014_QH13__chunk_002",
+          "chapter": "Chương III",
+          "article": "Điều 85",
+          "content": "Mức đóng bảo hiểm xã hội bắt buộc: Người lao động đóng 8% mức tiền lương tháng vào quỹ hưu trí và tử tuất. Người sử dụng lao động đóng: 3% vào quỹ ốm đau và thai sản; 1% vào quỹ tai nạn lao động, bệnh nghề nghiệp; 14% vào quỹ hưu trí và tử tuất. Tổng mức đóng là 26% trên mức tiền lương tháng đóng bảo hiểm xã hội của người lao động."
+        }
+      ],
+      "relations": [
+        {
+          "target_so_ky_hieu": "45/2019/QH14",
+          "type": "REFERENCES",
+          "description": "Luật BHXH dẫn chiếu đến Bộ luật Lao động về quan hệ lao động"
+        }
+      ]
+    },
+    {
+      "so_ky_hieu": "59/2020/QH14",
+      "title": "Luật Doanh nghiệp",
+      "loai_van_ban": "Luật",
+      "nganh": "Doanh nghiệp",
+      "linh_vuc": "Doanh nghiệp",
+      "co_quan_ban_hanh": "Quốc hội",
+      "ngay_ban_hanh": "2020-06-17",
+      "tinh_trang_hieu_luc": "Còn hiệu lực",
+      "chunks": [
+        {
+          "chunk_id": "59_2020_QH14__chunk_000",
+          "chapter": "Chương I",
+          "article": "Điều 1",
+          "content": "Luật này quy định về việc thành lập, tổ chức quản lý, tổ chức lại, giải thể và hoạt động có liên quan của doanh nghiệp, bao gồm công ty trách nhiệm hữu hạn, công ty cổ phần, công ty hợp danh và doanh nghiệp tư nhân; quy định về nhóm công ty và hộ kinh doanh."
+        },
+        {
+          "chunk_id": "59_2020_QH14__chunk_001",
+          "chapter": "Chương I",
+          "article": "Điều 4",
+          "content": "Giải thích từ ngữ: Doanh nghiệp là tổ chức có tên riêng, có tài sản, có trụ sở giao dịch, được thành lập hoặc đăng ký thành lập theo quy định của pháp luật nhằm mục đích kinh doanh. Doanh nghiệp nhà nước bao gồm các doanh nghiệp do Nhà nước nắm giữ trên 50% vốn điều lệ, tổng số cổ phần có quyền biểu quyết."
+        },
+        {
+          "chunk_id": "59_2020_QH14__chunk_002",
+          "chapter": "Chương IV",
+          "article": "Điều 46",
+          "content": "Công ty trách nhiệm hữu hạn hai thành viên trở lên là doanh nghiệp có từ 02 đến 50 thành viên là tổ chức, cá nhân. Thành viên chịu trách nhiệm về các khoản nợ và nghĩa vụ tài sản khác của doanh nghiệp trong phạm vi số vốn đã góp vào doanh nghiệp. Phần vốn góp của thành viên chỉ được chuyển nhượng theo quy định tại các điều 51, 52 và 53 của Luật này."
+        }
+      ],
+      "relations": [
+        {
+          "target_so_ky_hieu": "45/2019/QH14",
+          "type": "REFERENCES",
+          "description": "Luật Doanh nghiệp dẫn chiếu BLLĐ về quyền lao động trong doanh nghiệp"
+        }
+      ]
+    }
+  ]
+}

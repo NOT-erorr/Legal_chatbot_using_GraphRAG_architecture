@@ -1,0 +1,88 @@
+##############################################################################
+#  GraphRAG – Vietnamese Legal Document System
+#  Docker Compose: PostgreSQL 15 + Neo4j 5 (Community) + Redis 7
+##############################################################################
+version: "3.9"
+
+services:
+  # ================================================================
+  # PostgreSQL 15  —  Central Relational Storage (Source of Truth)
+  # ================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: graphrag-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-law_graphrag}
+      POSTGRES_USER:     ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-run schema.sql on first startup
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphrag-net
+
+  # ================================================================
+  # Neo4j 5 Community  —  Knowledge Graph (Legal Relationships)
+  # ================================================================
+  neo4j:
+    image: neo4j:5-community
+    container_name: graphrag-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # Browser UI  (http://localhost:7474)
+      - "7687:7687"   # Bolt protocol
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j123}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_server_memory_heap_initial__size: "256m"
+      NEO4J_server_memory_heap_max__size: "512m"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-neo4j123} 'RETURN 1'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - graphrag-net
+
+  # ================================================================
+  # Redis 7  —  Query / Session Cache (optional)
+  # ================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: graphrag-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphrag-net
+
+networks:
+  graphrag-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  redis_data:
