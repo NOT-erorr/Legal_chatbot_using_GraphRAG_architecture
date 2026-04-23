@@ -1,0 +1,12 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - cloud_run_job/Dockerfile
+      - -t
+      - gcr.io/$PROJECT_ID/vn-legal-direct-sync:latest
+      - .
+
+images:
+  - gcr.io/$PROJECT_ID/vn-legal-direct-sync:latest
