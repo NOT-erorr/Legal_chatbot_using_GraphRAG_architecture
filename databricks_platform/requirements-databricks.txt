@@ -1,0 +1,4 @@
+datasets==2.21.0
+google-genai>=0.7.0
+qdrant-client>=1.12.1
+neo4j>=5.25.0
