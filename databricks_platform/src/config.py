@@ -38,7 +38,9 @@ class PlatformConfig:
 
     # Source ingest (HuggingFace)
     hf_dataset_name: str = "th1nhng0/vietnamese-legal-documents"
-    hf_split: str = "train"
+    hf_dataset_config: str = "content"
+    hf_split: str = "data"
+    hf_cache_dir: str = "/local_disk0/.hf.data.cache"
     source_batch_size: int = 500
     max_source_records: int = 0
 
@@ -84,14 +86,19 @@ class PlatformConfig:
             raise KeyError(f"Unknown logical table name: {logical_name}")
         return f"{self.catalog}.{self.schema}.{tables[logical_name]}"
 
-    def validate_for_gold(self) -> None:
-        if not self.gemini_api_key:
+    def validate_for_gold(
+        self,
+        require_embedding_key: bool = True,
+        require_qdrant: bool = True,
+        require_neo4j: bool = True,
+    ) -> None:
+        if require_embedding_key and not self.gemini_api_key:
             raise ValueError("GEMINI_API_KEY must be set for gold embedding stage.")
 
-        if self.sync_to_qdrant and not self.qdrant_url:
+        if require_qdrant and self.sync_to_qdrant and not self.qdrant_url:
             raise ValueError("QDRANT_URL must be set when SYNC_TO_QDRANT=true.")
 
-        if self.sync_to_neo4j:
+        if require_neo4j and self.sync_to_neo4j:
             if not self.neo4j_uri:
                 raise ValueError("NEO4J_URI must be set when SYNC_TO_NEO4J=true.")
             if not self.neo4j_password:
@@ -120,7 +127,9 @@ class PlatformConfig:
             hf_dataset_name=os.getenv(
                 "HF_DATASET_NAME", "th1nhng0/vietnamese-legal-documents"
             ),
-            hf_split=os.getenv("HF_DATASET_SPLIT", "train"),
+            hf_dataset_config=os.getenv("HF_DATASET_CONFIG", "content"),
+            hf_split=os.getenv("HF_DATASET_SPLIT", "data"),
+            hf_cache_dir=os.getenv("HF_DATASET_CACHE_DIR", "/local_disk0/.hf.data.cache"),
             source_batch_size=_read_int("SOURCE_BATCH_SIZE", 500),
             max_source_records=_read_int("MAX_SOURCE_RECORDS", 0),
             chunk_target_tokens=_read_int("CHUNK_TARGET_TOKENS", 220),

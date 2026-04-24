@@ -25,7 +25,7 @@ class GeminiEmbeddingClient:
         self.model_name = model_name
         self.batch_size = max(1, batch_size)
         self.max_batch_tokens = max(1, max_batch_tokens)
-        self.max_attempts = max(1, max_attempts)
+        self.max_attempts = max(1, 10)  # default max_attempts to 10
 
         self._limiter = DualTokenBucketRateLimiter(
             rpm_limit=rpm_limit,
@@ -124,9 +124,11 @@ class GeminiEmbeddingClient:
                     ]
                 )
                 if not retriable or attempt >= self.max_attempts:
+                    print(f"[warn] Gemini API giving up after {attempt} attempts: {message}")
                     raise
 
-                backoff_seconds = min(30.0, (2 ** (attempt - 1)) + random.random())
+                backoff_seconds = min(60.0, (2 ** (attempt - 1)) + random.random() * 5)
+                print(f"[info] Gemini API throttled (attempt {attempt}/{self.max_attempts}). Waiting {backoff_seconds:.1f}s...")
                 time.sleep(backoff_seconds)
 
         raise RuntimeError("Unexpected retry exit in _embed_batch_with_retry")

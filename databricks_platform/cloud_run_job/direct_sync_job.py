@@ -21,6 +21,7 @@ if str(SRC_DIR) not in sys.path:
 from chunking import RuleBasedHierarchicalChunker
 from config import PlatformConfig
 from gemini_embedding import GeminiEmbeddingClient
+from html_to_text import html_to_text
 from sinks import Neo4jAuraSink, QdrantSink
 
 
@@ -288,13 +289,45 @@ def iter_source_documents(cfg: PlatformConfig, settings: JobSettings) -> Iterato
     if load_dataset is None:
         raise ImportError("datasets package is required for HuggingFace source mode")
 
-    print(f"[source] reading HuggingFace: {cfg.hf_dataset_name} ({cfg.hf_split})")
-    dataset = load_dataset(cfg.hf_dataset_name, split=cfg.hf_split, streaming=True)
+    # ── Load auxiliary configs for joining ───────────────────────────────
+    metadata_map, relations_map = _load_hf_auxiliary_configs(cfg)
+    print(
+        f"[source] loaded {len(metadata_map)} metadata rows, "
+        f"{len(relations_map)} relation groups"
+    )
+
+    # ── Stream content config ────────────────────────────────────────────
+    dataset_config = cfg.hf_dataset_config.strip()
+    cache_dir = str(cfg.hf_cache_dir or "").strip()
+    if cache_dir:
+        os.makedirs(cache_dir, exist_ok=True)
+
+    load_kwargs: Dict[str, Any] = {
+        "split": cfg.hf_split,
+        "streaming": True,
+    }
+    if cache_dir:
+        load_kwargs["cache_dir"] = cache_dir
+
+    if dataset_config:
+        print(
+            "[source] reading HuggingFace: "
+            f"{cfg.hf_dataset_name}/{dataset_config} ({cfg.hf_split})"
+        )
+        dataset = load_dataset(
+            cfg.hf_dataset_name,
+            dataset_config,
+            **load_kwargs,
+        )
+    else:
+        print(f"[source] reading HuggingFace: {cfg.hf_dataset_name} ({cfg.hf_split})")
+        dataset = load_dataset(cfg.hf_dataset_name, **load_kwargs)
+
     for idx, row in enumerate(dataset):
         if settings.max_source_records > 0 and idx >= settings.max_source_records:
             break
         if isinstance(row, dict):
-            yield row
+            yield _join_hf_row(row, metadata_map, relations_map)
 
 
 def prepare_document(
@@ -308,15 +341,23 @@ def prepare_document(
     issued_date = str(_pick_first(source_doc, ["ngay_ban_hanh", "issued_date"], "")).strip()
     status = str(_pick_first(source_doc, ["tinh_trang_hieu_luc", "status"], "active")).strip()
 
-    doc_id = str(_pick_first(source_doc, ["doc_id"], "")).strip()
+    doc_id = str(_pick_first(source_doc, ["doc_id", "id"], "")).strip()
     if not doc_id:
         doc_id = make_doc_id(doc_number=doc_number, title=title, index=index)
+
+    # ── Extract content text ────────────────────────────────────────────
+    # Priority: content_text > content_html > raw chunks
+    content_text = str(source_doc.get("content_text") or "").strip()
+
+    if not content_text:
+        raw_html = source_doc.get("content_html")
+        if raw_html:
+            content_text = html_to_text(str(raw_html))
 
     raw_chunks = source_doc.get("chunks")
     if not isinstance(raw_chunks, list):
         raw_chunks = []
 
-    content_text = str(source_doc.get("content_text") or "").strip()
     if not content_text:
         content_text = compose_document_text(raw_chunks)
 
@@ -440,6 +481,103 @@ def make_doc_id(doc_number: str, title: str, index: int) -> str:
     normalized = "_".join(part for part in normalized.split("_") if part)
     normalized = normalized[:40] if normalized else "document"
     return f"{normalized}_{digest}".lower()
+
+
+def _load_hf_auxiliary_configs(
+    cfg: PlatformConfig,
+) -> tuple[Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]]]:
+    """Load ``metadata`` and ``relationships`` HF configs into memory dicts.
+
+    Returns:
+        metadata_map:  {str(id) -> {field: value, ...}}
+        relations_map: {str(doc_id) -> [{other_doc_id, relationship}, ...]}
+    """
+    if load_dataset is None:
+        print("[warn] datasets package not available; skipping auxiliary config loading")
+        return {}, {}
+
+    cache_dir = str(cfg.hf_cache_dir or "").strip()
+    if cache_dir:
+        os.makedirs(cache_dir, exist_ok=True)
+
+    base_kwargs: Dict[str, Any] = {"streaming": True}
+    if cache_dir:
+        base_kwargs["cache_dir"] = cache_dir
+
+    metadata_map: Dict[str, Dict[str, Any]] = {}
+    relations_map: Dict[str, List[Dict[str, Any]]] = {}
+
+    # ── metadata ────────────────────────────────────────────────────────
+    try:
+        meta_ds = load_dataset(
+            cfg.hf_dataset_name, "metadata", split="data", **base_kwargs
+        )
+        for row in meta_ds:
+            if not isinstance(row, dict):
+                continue
+            doc_id = str(row.get("id", "")).strip()
+            if doc_id:
+                metadata_map[doc_id] = row
+    except Exception as exc:
+        print(f"[warn] Failed to load metadata config: {exc}")
+
+    # ── relationships ───────────────────────────────────────────────────
+    try:
+        rels_ds = load_dataset(
+            cfg.hf_dataset_name, "relationships", split="data", **base_kwargs
+        )
+        for row in rels_ds:
+            if not isinstance(row, dict):
+                continue
+            doc_id = str(row.get("doc_id", "")).strip()
+            if doc_id:
+                relations_map.setdefault(doc_id, []).append(row)
+    except Exception as exc:
+        print(f"[warn] Failed to load relationships config: {exc}")
+
+    return metadata_map, relations_map
+
+
+def _join_hf_row(
+    content_row: Dict[str, Any],
+    metadata_map: Dict[str, Dict[str, Any]],
+    relations_map: Dict[str, List[Dict[str, Any]]],
+) -> Dict[str, Any]:
+    """Merge a ``content`` row with matching ``metadata`` and ``relationships``."""
+    doc_id = str(content_row.get("id", "")).strip()
+    joined: Dict[str, Any] = dict(content_row)
+
+    # Merge metadata fields (title, so_ky_hieu, co_quan_ban_hanh, etc.)
+    meta = metadata_map.get(doc_id)
+    if meta:
+        for key, value in meta.items():
+            if key == "id":
+                continue
+            if key not in joined or joined[key] is None:
+                joined[key] = value
+
+    # Attach relationships as "relations" list
+    rels = relations_map.get(doc_id, [])
+    joined_relations: List[Dict[str, Any]] = []
+    for rel in rels:
+        target = str(rel.get("other_doc_id", "")).strip()
+        rel_type = str(rel.get("relationship", "REFERS_TO")).strip()
+        if target:
+            target_meta = metadata_map.get(target)
+            target_doc_number = (
+                str(target_meta.get("so_ky_hieu", "")).strip()
+                if target_meta
+                else ""
+            )
+            joined_relations.append({
+                "target_doc_id": target,
+                "target_so_ky_hieu": target_doc_number,
+                "type": rel_type,
+            })
+    if joined_relations:
+        joined["relations"] = joined_relations
+
+    return joined
 
 
 def _replace_max_records(cfg: PlatformConfig, max_source_records: int) -> PlatformConfig:

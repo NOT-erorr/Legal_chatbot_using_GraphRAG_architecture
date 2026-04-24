@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Virtual environments
+venv/
+.venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+orchestrator/.env
+databricks_platform/.env
+databricks_platform/src/.env
+
+# Build artifacts
+dist/
+build/
+
+# Databricks local artifacts
+databricks_platform/.databricks/bundle/**/terraform/
+databricks_platform/.databricks/bundle/**/deployment.json
+databricks_platform/.databricks/bundle/**/sync-snapshots/
+
+# IDE
+.vscode/

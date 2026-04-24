@@ -1,0 +1,29 @@
+# ============================================================================
+# Orchestrator Service (LangGraph) — Dependencies
+# ============================================================================
+
+# ---- LangGraph Core ----
+langgraph>=0.4.0
+langchain-core>=0.3.0
+
+# ---- LLM Provider ----
+google-genai>=1.0.0
+
+# ---- Vector + Graph DB Clients ----
+qdrant-client>=1.9.0
+neo4j>=5.25.0
+
+# ---- PostgreSQL ----
+psycopg2-binary>=2.9.9
+
+# ---- Redis ----
+redis>=5.1.0
+
+# ---- Web Framework ----
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
+pydantic-settings>=2.5.0
+
+# ---- Utils ----
+python-dotenv>=1.0.0

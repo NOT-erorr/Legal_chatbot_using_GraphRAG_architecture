@@ -1,0 +1,137 @@
+
+#  GraphRAG – Vietnamese Legal Document System
+#  Docker Compose: PostgreSQL 15 + Neo4j 5 (Community) + Redis 7
+version: "3.9"
+
+services:
+  # PostgreSQL 15  —  Central Relational Storage (Source of Truth)
+  postgres:
+    image: postgres:15-alpine
+    container_name: graphrag-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-legal_chatbot}
+      POSTGRES_USER:     ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-run chatbot schema on first startup
+      - ./db/chatbot_schema.sql:/docker-entrypoint-initdb.d/01_chatbot_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphrag-net
+
+  # Neo4j 5 Community  —  Knowledge Graph (Legal Relationships)
+  neo4j:
+    image: neo4j:5-community
+    container_name: graphrag-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # Browser UI  (http://localhost:7474)
+      - "7687:7687"   # Bolt protocol
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j123}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_server_memory_heap_initial__size: "256m"
+      NEO4J_server_memory_heap_max__size: "512m"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-neo4j123} 'RETURN 1'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - graphrag-net
+
+  # Redis 7  —  Query / Session Cache (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: graphrag-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphrag-net
+
+  # Qdrant  —  Vector Database for Semantic Search
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: graphrag-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphrag-net
+
+  # Orchestrator Backend  —  LangGraph + FastAPI
+  backend:
+    build:
+      context: ./orchestrator
+    container_name: graphrag-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8080"
+    env_file:
+      - ./orchestrator/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - graphrag-net
+
+  # Web UI & API Gateway  —  Nginx + React
+  frontend:
+    build:
+      context: ./frontend
+    container_name: graphrag-frontend
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    networks:
+      - graphrag-net
+
+networks:
+  graphrag-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  redis_data:
+  qdrant_data:
