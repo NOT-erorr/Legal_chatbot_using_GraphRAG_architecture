@@ -71,6 +71,9 @@ class OrchestratorConfig:
     pg_database: str = "legal_chatbot"
     pg_user: str = "postgres"
     pg_password: str = "postgres123"
+    # SSL mode cho psycopg2. "prefer" (mặc định libpq) chạy được cả local lẫn
+    # cloud; đặt "require" khi dùng Neon/Supabase để ép kết nối mã hóa.
+    pg_sslmode: str = "prefer"
 
     # ── Redis ───────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
@@ -117,6 +120,7 @@ class OrchestratorConfig:
             pg_database=_env("POSTGRES_DB", "legal_chatbot"),
             pg_user=_env("POSTGRES_USER", "postgres"),
             pg_password=_env("POSTGRES_PASSWORD", "postgres123"),
+            pg_sslmode=_env("POSTGRES_SSLMODE", "prefer"),
             redis_url=_env("REDIS_URL", "redis://localhost:6379/0"),
             redis_cache_ttl=_env_int("REDIS_CACHE_TTL", 300),
             google_client_id=_env("GOOGLE_CLIENT_ID"),

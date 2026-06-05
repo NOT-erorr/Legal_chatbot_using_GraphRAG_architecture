@@ -46,6 +46,9 @@ jobs:
         env:
           # URL backend Cloud Run; rỗng → API gọi same-origin (sẽ fail trên Pages).
           VITE_API_URL: ${{ vars.BACKEND_URL }}
+          # Google OAuth Client ID — frontend cần lúc build để render nút Sign-in.
+          # (Không bí mật: client ID vốn nhúng công khai trong bundle JS.)
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           # Subpath GitHub Pages: https://<user>.github.io/<repo>/
           BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build

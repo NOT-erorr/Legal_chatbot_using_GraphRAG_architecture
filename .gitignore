@@ -16,6 +16,15 @@ frontend/node_modules/
 .env
 .env.*
 !.env.example
+# Local filled-in secrets (giữ template .github/secrets.example.env, chặn bản thật)
+*.local.env
+.secrets*
+# Downloaded credential files — TUYỆT ĐỐI không commit
+*client_secret*.json
+*.apps.googleusercontent.com.json
+*-sa-key.json
+gcp-sa-key.json
+sa-key.json
 orchestrator/.env
 databricks_platform/.env
 databricks_platform/src/.env

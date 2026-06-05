@@ -51,6 +51,7 @@ class ChatPersistence:
                 dbname=self.cfg.pg_database,
                 user=self.cfg.pg_user,
                 password=self.cfg.pg_password,
+                sslmode=self.cfg.pg_sslmode,
             )
             self._conn.autocommit = False
         return self._conn
