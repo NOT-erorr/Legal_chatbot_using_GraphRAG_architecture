@@ -1,7 +1,6 @@
 """
-orchestrator/retrievers.py — Optimized Hybrid Search (v2)
+orchestrator/retrievers.py — Optimized Hybrid Search
 
-Thay đổi so với v1:
   ┌─────────────────────────────────────────────────────────────────┐
   │ 1. TRUE PARALLEL  — Qdrant + Neo4j chạy đồng thời (asyncio)    │
   │ 2. RRF FUSION     — Reciprocal Rank Fusion merge 3 sources      │
@@ -12,7 +11,7 @@ Thay đổi so với v1:
   └─────────────────────────────────────────────────────────────────┘
 
 Flow:
-  query ──┬──► embed_query() ──► QdrantRetriever.search()     ─┐
+  query ──┬──► embed_query() ──► QdrantRetriever.search()      ─┐
           ├──► Neo4jRetriever.keyword_search()                  ├──► rrf_fusion() ──► List[ChunkResult]
           └──► (doc_ids từ Qdrant) ──► Neo4jRetriever.expand() ─┘
                (chạy sau khi Qdrant xong, không block keyword search)
@@ -23,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -511,8 +511,9 @@ class Neo4jRetriever:
         """
         Graph traversal từ danh sách doc_ids.
 
-        Duyệt quan hệ pháp lý (AMENDS, SUPERSEDES, IMPLEMENTS, REFERENCES, ...)
-        để tìm văn bản liên quan, sau đó lấy top chunks của chúng.
+        Duyệt các quan hệ pháp lý giữa Document–Document (relationship type động:
+        AMENDS, SUPERSEDES, MENTIONS, REFERS_TO, ... do ETL sink tạo) để tìm văn
+        bản liên quan, sau đó lấy top chunks của chúng. Bỏ qua cạnh HAS_CHUNK.
 
         Returns:
             List[ChunkResult] với graph_score = proximity score (1/hop_distance)
@@ -568,6 +569,7 @@ class Neo4jRetriever:
                          (related:Document)
             WHERE related.doc_id <> seed_id
               AND NOT related.doc_id IN $doc_ids
+              AND none(rel IN relationships(path) WHERE type(rel) = 'HAS_CHUNK')
             WITH DISTINCT related,
                  min(length(path)) AS hop_distance,
                  collect(DISTINCT [rel IN relationships(path) | type(rel)])[0] AS rel_types
@@ -651,6 +653,87 @@ class Neo4jRetriever:
                 sources=["neo4j_graph"],
             ))
         return chunks
+
+    # ── 3. Structured fetch (multi-intent, read-only) ─────────────────────
+    # Chỉ ĐỌC dữ liệu có sẵn (Document/Chunk/relationships). Không cần index
+    # mới — match Document theo doc_number hoặc title CONTAINS (scan ~6k node).
+
+    def fetch_document_chunks(
+        self,
+        doc_number: Optional[str] = None,
+        doc_name: Optional[str] = None,
+        limit: int = 400,
+    ) -> List[ChunkResult]:
+        """Lấy TẤT CẢ chunks của một văn bản, sort theo chunk_order.
+
+        Dùng cho EXPLAIN_ARTICLE / SUMMARIZE_DOC / COMPARE. Lọc theo Điều/Khoản
+        được thực hiện ở tầng orchestrator (graph.py) sau khi có full chunks.
+        """
+        if not doc_number and not doc_name:
+            return []
+
+        # Title văn bản trong corpus thường KHÔNG chứa "Luật/Nghị định..." (đó là
+        # tiêu đề mô tả). Bỏ tiền tố loại văn bản để CONTAINS khớp được.
+        doc_name = _doc_name_for_match(doc_name)
+
+        cypher = """
+            MATCH (d:Document)
+            WHERE ($doc_number IS NOT NULL AND d.doc_number = $doc_number)
+               OR ($doc_name IS NOT NULL AND toLower(d.title) CONTAINS toLower($doc_name))
+            WITH d ORDER BY size(coalesce(d.title, '')) ASC LIMIT 1
+            MATCH (d)-[:HAS_CHUNK]->(c:Chunk)
+            RETURN c.chunk_uid   AS chunk_uid,
+                   c.doc_id      AS doc_id,
+                   d.doc_number  AS doc_number,
+                   d.title       AS doc_title,
+                   c.text        AS chunk_text,
+                   c.chapter     AS chapter,
+                   c.section     AS section,
+                   c.article     AS article,
+                   c.clause      AS clause,
+                   c.point       AS point,
+                   c.chunk_order AS chunk_order,
+                   c.token_count AS token_count
+            ORDER BY c.chunk_order ASC
+            LIMIT $limit
+        """
+        params = {"doc_number": doc_number, "doc_name": doc_name, "limit": limit}
+        with self.driver.session(database=self.cfg.neo4j_database) as session:
+            rows = [dict(r) for r in session.run(cypher, **params)]
+
+        return [_neo4j_row_to_chunk(r, graph_score=1.0) for r in rows]
+
+    def fetch_related_documents(
+        self,
+        doc_number: Optional[str] = None,
+        doc_name: Optional[str] = None,
+        limit: int = 30,
+    ) -> List[Dict[str, Any]]:
+        """Liệt kê văn bản liên quan (LIST_RELATED) — duyệt mọi quan hệ
+        Document–Document (trừ HAS_CHUNK), trả kèm loại quan hệ + hướng."""
+        if not doc_number and not doc_name:
+            return []
+
+        doc_name = _doc_name_for_match(doc_name)
+
+        cypher = """
+            MATCH (d:Document)
+            WHERE ($doc_number IS NOT NULL AND d.doc_number = $doc_number)
+               OR ($doc_name IS NOT NULL AND toLower(d.title) CONTAINS toLower($doc_name))
+            WITH d ORDER BY size(coalesce(d.title, '')) ASC LIMIT 1
+            MATCH (d)-[r]-(related:Document)
+            WHERE type(r) <> 'HAS_CHUNK'
+            RETURN DISTINCT
+                   type(r) AS relation,
+                   CASE WHEN startNode(r) = d THEN 'outgoing' ELSE 'incoming' END AS direction,
+                   related.doc_number AS doc_number,
+                   related.title      AS title,
+                   related.doc_type   AS doc_type
+            LIMIT $limit
+        """
+        params = {"doc_number": doc_number, "doc_name": doc_name, "limit": limit}
+        with self.driver.session(database=self.cfg.neo4j_database) as session:
+            return [dict(r) for r in session.run(cypher, **params)]
 
 
 # HybridRetriever — orchestrates everything
@@ -850,3 +933,41 @@ def _generate_uid(row: Dict[str, Any]) -> str:
     """Tạo chunk_uid từ doc_id + chunk_order khi không có uid sẵn."""
     key = f"{row.get('doc_id', '')}_{row.get('chunk_order', 0)}"
     return hashlib.md5(key.encode()).hexdigest()[:16]
+
+
+_DOC_TYPE_PREFIX = re.compile(
+    r"^\s*(bộ luật|luật|nghị định|thông tư liên tịch|thông tư|nghị quyết|"
+    r"quyết định|pháp lệnh|hiến pháp)\s+",
+    re.IGNORECASE,
+)
+
+
+def _doc_name_for_match(name: Optional[str]) -> Optional[str]:
+    """Bỏ tiền tố loại văn bản ('Luật ', 'Nghị định '...) để khớp title mô tả.
+
+    Vd: 'Luật Thuế thu nhập cá nhân' → 'Thuế thu nhập cá nhân'.
+    Nếu sau khi bỏ còn rỗng thì giữ nguyên tên gốc."""
+    if not name:
+        return name
+    stripped = _DOC_TYPE_PREFIX.sub("", name).strip()
+    return stripped or name
+
+
+def _neo4j_row_to_chunk(row: Dict[str, Any], graph_score: float = 0.0) -> ChunkResult:
+    """Map một record từ structured fetch sang ChunkResult."""
+    return ChunkResult(
+        chunk_uid=row.get("chunk_uid") or _generate_uid(row),
+        doc_id=row.get("doc_id", ""),
+        doc_number=row.get("doc_number", ""),
+        doc_title=row.get("doc_title", ""),
+        chunk_text=row.get("chunk_text", ""),
+        chunk_order=row.get("chunk_order") or 0,
+        chapter=row.get("chapter"),
+        section=row.get("section"),
+        article=row.get("article"),
+        clause=row.get("clause"),
+        point=row.get("point"),
+        token_count=row.get("token_count") or 0,
+        graph_score=graph_score,
+        sources=["neo4j_structured"],
+    )

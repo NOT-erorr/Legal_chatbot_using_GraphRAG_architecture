@@ -1,0 +1,77 @@
+[
+  {
+    "id": "q001",
+    "question": "Thuế suất thuế GTGT đối với hàng hóa xuất khẩu là bao nhiêu phần trăm?",
+    "category": "gtgt"
+  },
+  {
+    "id": "q002",
+    "question": "Doanh nghiệp được khấu trừ thuế GTGT đầu vào trong những trường hợp nào?",
+    "category": "gtgt"
+  },
+  {
+    "id": "q003",
+    "question": "Thuế suất thuế thu nhập doanh nghiệp phổ thông hiện hành là bao nhiêu?",
+    "category": "tndn"
+  },
+  {
+    "id": "q004",
+    "question": "Doanh nghiệp nhỏ và vừa được ưu đãi thuế TNDN như thế nào?",
+    "category": "tndn"
+  },
+  {
+    "id": "q005",
+    "question": "Mức thuế suất thuế thu nhập cá nhân áp dụng cho thu nhập từ tiền lương tiền công là bao nhiêu?",
+    "category": "tncn"
+  },
+  {
+    "id": "q006",
+    "question": "Các khoản thu nhập nào được miễn thuế thu nhập cá nhân?",
+    "category": "tncn"
+  },
+  {
+    "id": "q007",
+    "question": "Điều kiện để được hoàn thuế GTGT đối với dự án đầu tư là gì?",
+    "category": "gtgt"
+  },
+  {
+    "id": "q008",
+    "question": "Thời hạn nộp tờ khai thuế GTGT theo tháng là khi nào?",
+    "category": "hanh_chinh_thue"
+  },
+  {
+    "id": "q009",
+    "question": "Hành vi trốn thuế bị xử phạt như thế nào theo quy định pháp luật hiện hành?",
+    "category": "xu_phat"
+  },
+  {
+    "id": "q010",
+    "question": "Doanh nghiệp có vốn đầu tư nước ngoài được ưu đãi thuế TNDN trong lĩnh vực nào?",
+    "category": "tndn"
+  },
+  {
+    "id": "q011",
+    "question": "Thuế nhà thầu áp dụng cho tổ chức nước ngoài kinh doanh tại Việt Nam được tính như thế nào?",
+    "category": "nha_thau"
+  },
+  {
+    "id": "q012",
+    "question": "Chi phí được trừ khi tính thuế TNDN phải đáp ứng điều kiện gì?",
+    "category": "tndn"
+  },
+  {
+    "id": "q013",
+    "question": "Mức phạt chậm nộp thuế theo ngày là bao nhiêu phần trăm?",
+    "category": "xu_phat"
+  },
+  {
+    "id": "q014",
+    "question": "Hóa đơn điện tử bắt buộc áp dụng từ thời điểm nào và theo quy định nào?",
+    "category": "hoa_don"
+  },
+  {
+    "id": "q015",
+    "question": "Thời hiệu truy thu thuế và xử phạt vi phạm hành chính về thuế là bao nhiêu năm?",
+    "category": "hanh_chinh_thue"
+  }
+]

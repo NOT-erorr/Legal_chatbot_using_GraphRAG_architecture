@@ -1,11 +1,23 @@
 // src/services/api.js
 
-// Use VITE_API_URL if injected during build, else default to API Gateway relative routing
-const API_BASE = 'https://graphrag-orchestrator-376046964237.asia-southeast1.run.app';
+import { getToken } from './session';
+
+// Use VITE_API_URL if injected during build, else default to relative routing.
+// Trong Docker: VITE_API_URL="" → gọi /api/v1/... same-origin, nginx proxy sang backend.
+// Cloud Run/standalone: set VITE_API_URL=https://<backend-url> khi build.
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
+
+// Gắn Bearer token (nếu có) vào headers cho các endpoint cần xác thực.
+function authHeaders(extra = {}) {
+  const headers = { ...extra };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
 
 const LegalAPI = {
   /**
-   * Chat — full LangGraph pipeline
+   * Chat — full LangGraph pipeline (yêu cầu đăng nhập).
    */
   async chat(question, conversationId = null, topKVector = 5, topKGraph = 5) {
     const body = {
@@ -18,22 +30,75 @@ const LegalAPI = {
     try {
       const res = await fetch(`${API_BASE}/api/v1/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
+        const error = new Error(err.detail || `HTTP ${res.status}`);
+        error.status = res.status;
+        throw error;
       }
 
       return await res.json();
     } catch (err) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+      // Lỗi mạng (backend offline) → trả mock demo. Lỗi 4xx/5xx vẫn ném ra.
+      if (err.status === undefined &&
+          (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
         return this._mockResponse(question);
       }
       throw err;
     }
+  },
+
+  /**
+   * Đăng nhập bằng email + mật khẩu.
+   */
+  async login(email, password) {
+    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  /**
+   * Đăng ký tài khoản bằng email + mật khẩu.
+   */
+  async register(email, password, fullName = null) {
+    const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, full_name: fullName }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  /**
+   * Đăng ký / đăng nhập bằng Google account.
+   * @param {string} credential — Google ID token (JWT) từ Google Identity Services.
+   */
+  async googleAuth(credential) {
+    const res = await fetch(`${API_BASE}/api/v1/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
   },
 
   /**

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LegalAPI from '../services/api';
+import { getSession, clearSession } from '../services/session';
 import { Sidebar } from '../components/Sidebar';
 import { Message, TypingIndicator } from '../components/Message';
 import './Chat.css';
@@ -43,12 +44,12 @@ export default function Chat() {
 
   // Load state on mount
   useEffect(() => {
-    const sessionUser = sessionStorage.getItem('legalai_user');
+    const sessionUser = getSession();
     if (!sessionUser) {
       navigate('/');
       return;
     }
-    setUser(JSON.parse(sessionUser));
+    setUser(sessionUser);
 
     try {
       const savedConvs = JSON.parse(localStorage.getItem('legalai_conversations') || '[]');
@@ -161,13 +162,19 @@ export default function Chat() {
       setQuestionCount(prev => prev + 1);
 
     } catch (err) {
+      // Token hết hạn / không hợp lệ → đăng xuất, quay về Login.
+      if (err.status === 401) {
+        clearSession();
+        navigate('/');
+        return;
+      }
       const errMsg = {
         role: 'assistant',
         content: `❌ Lỗi: ${err.message}\n\nVui lòng thử lại sau.`,
         time: new Date().toISOString(),
       };
-      setConversations(prev => prev.map(c => 
-        c.id === currentConversationId 
+      setConversations(prev => prev.map(c =>
+        c.id === currentConversationId
           ? { ...c, messages: [...c.messages, errMsg] }
           : c
       ));
@@ -194,7 +201,7 @@ export default function Chat() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('legalai_user');
+    clearSession();
     navigate('/');
   };
 
@@ -204,24 +211,24 @@ export default function Chat() {
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </div>
       <h2>Xin chào! Tôi là LegalAI Assistant</h2>
-      <p>Tôi có thể giúp bạn tra cứu và giải thích các quy định pháp luật Việt Nam dựa trên 518,255 văn bản pháp lý chính thức.</p>
+      <p>Tôi có thể giúp bạn tra cứu và giải thích các quy định pháp luật về thuế của Việt Nam dựa trên hơn 20,000 văn bản pháp lý về thuế chính thức.</p>
 
       <div className="welcome-topics">
-        <div className="topic-card" onClick={() => handleSend("Điều kiện thành lập doanh nghiệp tư nhân theo luật hiện hành?")}>
-          <div className="topic-card-title">🏢 Doanh nghiệp</div>
-          <div className="topic-card-desc">Thành lập, đăng ký, quản trị</div>
+        <div className="topic-card" onClick={() => handleSend("Cách tính thuế thu nhập cá nhân từ tiền lương năm 2024?")}>
+          <div className="topic-card-title">💼 Thuế TNCN</div>
+          <div className="topic-card-desc">Biểu thuế, giảm trừ, quyết toán</div>
         </div>
-        <div className="topic-card" onClick={() => handleSend("Quyền lợi bảo hiểm xã hội cho người lao động 2024?")}>
-          <div className="topic-card-title">👷 Lao động</div>
-          <div className="topic-card-desc">Hợp đồng, BHXH, sa thải</div>
+        <div className="topic-card" onClick={() => handleSend("Doanh nghiệp kê khai và nộp thuế GTGT theo phương pháp nào?")}>
+          <div className="topic-card-title">🧾 Thuế GTGT</div>
+          <div className="topic-card-desc">Kê khai, khấu trừ, hoàn thuế</div>
         </div>
-        <div className="topic-card" onClick={() => handleSend("Quyền sử dụng đất và chuyển nhượng theo Luật Đất Đai 2024?")}>
-          <div className="topic-card-title">🏡 Đất đai</div>
-          <div className="topic-card-desc">Quyền sử dụng, chuyển nhượng</div>
+        <div className="topic-card" onClick={() => handleSend("Thuế thu nhập doanh nghiệp hiện hành có các mức ưu đãi nào?")}>
+          <div className="topic-card-title">🏭 Thuế TNDN</div>
+          <div className="topic-card-desc">Thuế suất, ưu đãi, chi phí hợp lệ</div>
         </div>
-        <div className="topic-card" onClick={() => handleSend("Thủ tục ly hôn đơn phương và quyền nuôi con?")}>
-          <div className="topic-card-title">👨‍👩‍👧 Hôn nhân</div>
-          <div className="topic-card-desc">Ly hôn, quyền nuôi con</div>
+        <div className="topic-card" onClick={() => handleSend("Hộ kinh doanh cần nộp những loại thuế, phí nào trong năm?")}>
+          <div className="topic-card-title">🏪 Thuế hộ kinh doanh</div>
+          <div className="topic-card-desc">Thuế khoán, lệ phí môn bài</div>
         </div>
       </div>
     </div>

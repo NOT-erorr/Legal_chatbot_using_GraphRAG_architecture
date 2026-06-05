@@ -156,6 +156,10 @@ class Neo4jAuraSink:
         queries = [
             "CREATE CONSTRAINT doc_id_unique IF NOT EXISTS FOR (d:Document) REQUIRE d.doc_id IS UNIQUE",
             "CREATE CONSTRAINT chunk_uid_unique IF NOT EXISTS FOR (c:Chunk) REQUIRE c.chunk_uid IS UNIQUE",
+            # Fulltext index cho keyword/BM25 search trong HybridRetriever.
+            # Phải khớp tên 'legal_fulltext' mà orchestrator/retrievers.py gọi.
+            "CREATE FULLTEXT INDEX legal_fulltext IF NOT EXISTS "
+            "FOR (c:Chunk) ON EACH [c.text, c.doc_number]",
         ]
         with self.driver.session(database=self.database) as session:
             for query in queries:
@@ -221,14 +225,28 @@ class Neo4jAuraSink:
         if not relations:
             return 0
 
+        # Tạo relationship type ĐỘNG theo row.relation_type (AMENDS, SUPERSEDES,
+        # MENTIONS, REFERS_TO, ...) thay vì gộp tất cả vào một type REFERS_TO.
+        # Cypher thuần không cho tham số hoá rel type → dùng apoc.merge.relationship.
+        # rel_type được chuẩn hoá: trim → UPPER → thay khoảng trắng bằng '_',
+        # fallback 'REFERS_TO' nếu rỗng/null. Giá trị gốc vẫn lưu ở property.
         query = """
             UNWIND $rows AS row
+            WITH row,
+                 coalesce(
+                     nullif(replace(toUpper(trim(row.relation_type)), ' ', '_'), ''),
+                     'REFERS_TO'
+                 ) AS rel_type
             MERGE (src:Document {doc_id: row.source_doc_id})
               ON CREATE SET src.doc_number = row.source_doc_number
             MERGE (dst:Document {doc_number: row.target_doc_number})
-            MERGE (src)-[r:REFERS_TO]->(dst)
-            SET r.relation_type = row.relation_type,
-                r.updated_at = datetime()
+            WITH src, dst, rel_type,
+                 {relation_type: row.relation_type,
+                  relation_source: row.relation_source,
+                  updated_at: datetime()} AS props
+            CALL apoc.merge.relationship(src, rel_type, {}, props, dst, props)
+            YIELD rel
+            RETURN count(rel) AS cnt
         """
 
         total = 0

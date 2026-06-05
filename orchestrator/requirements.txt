@@ -25,5 +25,11 @@ uvicorn[standard]>=0.30.0
 pydantic>=2.0.0
 pydantic-settings>=2.5.0
 
+# ---- Auth / Password hashing ----
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1,<4.1   # passlib 1.7.4 không tương thích bcrypt>=4.1 (warning __about__)
+google-auth>=2.30.0  # xác minh Google ID token cho /api/v1/auth/google
+PyJWT>=2.8.0         # phát/giải mã access token (JWT) cho các endpoint bảo vệ
+
 # ---- Utils ----
 python-dotenv>=1.0.0

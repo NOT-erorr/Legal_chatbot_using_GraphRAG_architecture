@@ -1,0 +1,41 @@
+name: CI
+
+# Lint/test nhẹ chạy offline (không cần secrets/dịch vụ cloud) cho mỗi PR và push.
+# conftest.py đã mock graph/persistence/redis nên test backend chạy không cần mạng.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r orchestrator/requirements.txt
+          pip install pytest httpx
+      - name: Run unit tests
+        run: pytest orchestrator/tests -q --ignore=orchestrator/tests/eval
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

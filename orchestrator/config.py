@@ -10,7 +10,7 @@ from typing import Optional
 try:
     from dotenv import load_dotenv
 
-    _env_path = Path(__file__).resolve().parent.parent / ".env"
+    _env_path = Path(__file__).resolve().parent / ".env"
     if _env_path.exists():
         load_dotenv(_env_path)
 except ImportError:
@@ -39,7 +39,13 @@ class OrchestratorConfig:
     gemini_api_key: str = ""
     gemini_chat_model: str = "gemini-2.5-flash"
     gemini_temperature: float = 0.1
-    gemini_max_output_tokens: int = 2048
+    # Ngân sách token cho phần TRẢ LỜI hiển thị (tách khỏi thinking nhờ
+    # thinking_budget bên dưới) → tránh bị cắt giữa câu.
+    gemini_max_output_tokens: int = 4096
+    # Ngân sách token "suy luận" của Gemini 2.5 (model reasoning).
+    #   -1 = để model tự quyết (dynamic); 0 = tắt thinking; >0 = giới hạn cứng.
+    # Giới hạn thinking để nó không ăn hết ngân sách output.
+    gemini_thinking_budget: int = 1024
 
     # ── Gemini Embedding (để tạo query vector) ──────────────────────────
     gemini_embedding_model: str = "gemini-embedding-001"
@@ -70,6 +76,17 @@ class OrchestratorConfig:
     redis_url: str = "redis://localhost:6379/0"
     redis_cache_ttl: int = 300  # 5 phút
 
+    # ── Auth (Google OAuth) ─────────────────────────────────────────────
+    # OAuth 2.0 Client ID (Web) từ Google Cloud Console. Dùng để xác minh
+    # ID token mà frontend gửi lên. Trống = endpoint /auth/google bị tắt.
+    google_client_id: str = ""
+
+    # ── Auth (JWT) ──────────────────────────────────────────────────────
+    # Khóa ký access token. BẮT BUỘC đặt JWT_SECRET ngẫu nhiên khi deploy.
+    jwt_secret: str = "dev-insecure-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 1440  # 24 giờ
+
     # ── App ─────────────────────────────────────────────────────────────
     app_host: str = "0.0.0.0"
     app_port: int = 8001
@@ -81,7 +98,8 @@ class OrchestratorConfig:
             gemini_api_key=_env("GEMINI_API_KEY"),
             gemini_chat_model=_env("GEMINI_CHAT_MODEL", "gemini-2.5-flash"),
             gemini_temperature=_env_float("GEMINI_TEMPERATURE", 0.1),
-            gemini_max_output_tokens=_env_int("GEMINI_MAX_OUTPUT_TOKENS", 2048),
+            gemini_max_output_tokens=_env_int("GEMINI_MAX_OUTPUT_TOKENS", 4096),
+            gemini_thinking_budget=_env_int("GEMINI_THINKING_BUDGET", 1024),
             gemini_embedding_model=_env("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
             qdrant_url=_env("QDRANT_URL", "http://localhost:6333"),
             qdrant_api_key=_env("QDRANT_API_KEY"),
@@ -101,6 +119,10 @@ class OrchestratorConfig:
             pg_password=_env("POSTGRES_PASSWORD", "postgres123"),
             redis_url=_env("REDIS_URL", "redis://localhost:6379/0"),
             redis_cache_ttl=_env_int("REDIS_CACHE_TTL", 300),
+            google_client_id=_env("GOOGLE_CLIENT_ID"),
+            jwt_secret=_env("JWT_SECRET", "dev-insecure-change-me"),
+            jwt_algorithm=_env("JWT_ALGORITHM", "HS256"),
+            jwt_expire_minutes=_env_int("JWT_EXPIRE_MINUTES", 1440),
             app_host=_env("ORCHESTRATOR_HOST", "0.0.0.0"),
             app_port=_env_int("ORCHESTRATOR_PORT", 8001),
             log_level=_env("LOG_LEVEL", "info"),

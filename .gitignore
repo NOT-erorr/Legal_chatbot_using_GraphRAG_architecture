@@ -31,3 +31,8 @@ databricks_platform/.databricks/bundle/**/sync-snapshots/
 
 # IDE
 .vscode/
+.claude/
+
+# testing
+listmodel.py
+test_workflow.py

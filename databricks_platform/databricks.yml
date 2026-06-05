@@ -31,9 +31,6 @@ resources:
             parameters:
               - --stage
               - silver
-          environment:
-            CHECKPOINT_LOCATION: "{{job.parameters.CHECKPOINT_BASE_DIR}}/silver"
-            TRIGGER_AVAILABLE_NOW: "true"
 
         - task_key: gold_embedding_and_sync
           depends_on:
@@ -44,11 +41,6 @@ resources:
             parameters:
               - --stage
               - gold
-          environment:
-            GEMINI_API_KEY: "{{secrets/my_secrets/gemini_api_key}}"
-            SYNC_TO_QDRANT: "false"
-            CHECKPOINT_LOCATION: "{{job.parameters.CHECKPOINT_BASE_DIR}}/gold"
-            TRIGGER_AVAILABLE_NOW: "true"
 
       environments:
         - environment_key: default

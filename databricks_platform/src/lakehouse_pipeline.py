@@ -399,20 +399,138 @@ class LakehousePipeline:
 
         # ── Count total chunks (cheap operation) ────────────────────────
         silver_chunks_table = self.config.table("silver_chunks")
-        total_chunks = self.spark.table(silver_chunks_table).count()
-        print(f"[gold] total silver_chunks: {total_chunks}")
+        gold_embeddings_table = self.config.table("gold_embeddings")
+        silver_df_full = self.spark.table(silver_chunks_table)
+
+        # ── Resume: skip chunks already embedded in a previous run ───────
+        try:
+            already_embedded = self.spark.table(gold_embeddings_table).select("chunk_uid")
+            already_count = already_embedded.count()
+            if already_count > 0:
+                print(f"[gold] resuming: skipping {already_count} already-embedded chunks")
+                silver_df_full = silver_df_full.join(already_embedded, on="chunk_uid", how="left_anti")
+        except Exception:
+            pass  # table doesn't exist yet on first run
+
+        total_chunks = silver_df_full.count()
+        print(f"[gold] chunks remaining to embed: {total_chunks}")
 
         if total_chunks == 0:
-            empty_gold = self.spark.createDataFrame([], schema=_gold_schema())
-            empty_gold.write.mode("overwrite").format("delta").saveAsTable(
-                self.config.table("gold_embeddings")
-            )
-            return {
-                "gold_embeddings": 0,
-                "qdrant_points": 0,
+            print("[gold] all chunks already embedded, re-syncing sinks only")
+            existing_gold_count = self.spark.table(gold_embeddings_table).count()
+
+            resync_qdrant = self.config.sync_to_qdrant
+            if resync_qdrant and not self.config.qdrant_url:
+                print("[warn] SYNC_TO_QDRANT=true but QDRANT_URL is empty. Skipping Qdrant sync.")
+                resync_qdrant = False
+
+            resync_neo4j = self.config.sync_to_neo4j
+            if resync_neo4j and (not self.config.neo4j_uri or not self.config.neo4j_password):
+                print("[warn] SYNC_TO_NEO4J=true but NEO4J_URI/NEO4J_PASSWORD is missing. Skipping Neo4j sync.")
+                resync_neo4j = False
+
+            resync_qdrant_points = 0
+            if resync_qdrant:
+                qdrant_sink = QdrantSink(
+                    url=self.config.qdrant_url,
+                    api_key=self.config.qdrant_api_key,
+                    collection_name=self.config.qdrant_collection,
+                    vector_size=self.config.qdrant_vector_size,
+                    distance=self.config.qdrant_distance,
+                    batch_size=self.config.qdrant_batch_size,
+                )
+                gold_df = self.spark.table(gold_embeddings_table)
+                RESYNC_BATCH = 1000
+                resync_last_doc = ""
+                resync_last_order = -1
+                while True:
+                    if not resync_last_doc:
+                        rbatch_df = gold_df.orderBy("doc_id", "chunk_order").limit(RESYNC_BATCH)
+                    else:
+                        rbatch_df = (
+                            gold_df.where(
+                                (F.col("doc_id") > F.lit(resync_last_doc)) |
+                                ((F.col("doc_id") == F.lit(resync_last_doc)) & (F.col("chunk_order") > F.lit(resync_last_order)))
+                            )
+                            .orderBy("doc_id", "chunk_order")
+                            .limit(RESYNC_BATCH)
+                        )
+                    gold_rows = [row.asDict(recursive=True) for row in rbatch_df.collect()]
+                    if not gold_rows:
+                        break
+                    resync_last_doc = gold_rows[-1]["doc_id"]
+                    resync_last_order = gold_rows[-1]["chunk_order"]
+                    resync_qdrant_points += qdrant_sink.upsert_embeddings(gold_rows)
+                print(f"[gold] resync: {resync_qdrant_points} points upserted to Qdrant")
+
+            resync_stats: Dict[str, int] = {
+                "qdrant_points": resync_qdrant_points,
                 "neo4j_documents": 0,
                 "neo4j_chunks": 0,
                 "neo4j_relations": 0,
+            }
+
+            if resync_neo4j:
+                docs_rows = [row.asDict(recursive=True) for row in self.spark.table(self.config.table("silver_documents")).toLocalIterator()]
+                relation_rows = [row.asDict(recursive=True) for row in self.spark.table(self.config.table("silver_relations")).toLocalIterator()]
+                gold_meta_rows = [
+                    row.asDict(recursive=True)
+                    for row in self.spark.table(gold_embeddings_table).select(
+                        "chunk_uid", "doc_id", "doc_number", "chunk_order",
+                        "token_count", "chapter", "section", "article",
+                        "clause", "point", "chunk_text", "metadata_json",
+                    ).toLocalIterator()
+                ]
+                neo4j_sink = Neo4jAuraSink(
+                    uri=self.config.neo4j_uri,
+                    user=self.config.neo4j_user,
+                    password=self.config.neo4j_password,
+                    database=self.config.neo4j_database,
+                    batch_size=self.config.neo4j_batch_size,
+                )
+                try:
+                    result = neo4j_sink.sync(
+                        docs=[
+                            {
+                                "doc_id": row["doc_id"],
+                                "doc_number": row.get("doc_number"),
+                                "title": row.get("doc_title"),
+                                "doc_type": row.get("doc_type"),
+                                "issuing_body": row.get("issuing_body"),
+                                "issued_date": str(row.get("issued_date")) if row.get("issued_date") else None,
+                                "status": row.get("status"),
+                            }
+                            for row in docs_rows
+                        ],
+                        chunks=[
+                            {
+                                "chunk_uid": row["chunk_uid"],
+                                "doc_id": row["doc_id"],
+                                "doc_number": row.get("doc_number"),
+                                "chunk_order": int(row["chunk_order"]),
+                                "token_count": int(row["token_count"]),
+                                "chapter": row.get("chapter"),
+                                "section": row.get("section"),
+                                "article": row.get("article"),
+                                "clause": row.get("clause"),
+                                "point": row.get("point"),
+                                "chunk_text": row.get("chunk_text"),
+                                "metadata_json": row.get("metadata_json"),
+                            }
+                            for row in gold_meta_rows
+                        ],
+                        relations=relation_rows,
+                    )
+                finally:
+                    neo4j_sink.close()
+                resync_stats["neo4j_documents"] = result.get("documents", 0)
+                resync_stats["neo4j_chunks"] = result.get("chunks", 0)
+                resync_stats["neo4j_relations"] = result.get("relations", 0)
+                print(f"[gold] resync: {resync_stats['neo4j_documents']} docs, {resync_stats['neo4j_chunks']} chunks, {resync_stats['neo4j_relations']} relations synced to Neo4j")
+
+            return {
+                "gold_embeddings": existing_gold_count,
+                **resync_stats,
             }
 
         # ── Validate config ─────────────────────────────────────────────
@@ -462,7 +580,7 @@ class LakehousePipeline:
         total_qdrant = 0
         first_batch = True
 
-        silver_df = self.spark.table(silver_chunks_table)
+        silver_df = silver_df_full
         last_doc_id = ""
         last_chunk_order = -1
         batch_num = 1

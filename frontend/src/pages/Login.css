@@ -138,6 +138,22 @@
   color: var(--text-secondary);
 }
 
+.form-error {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #fca5a5;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  margin-bottom: 18px;
+}
+
+.google-btn-container {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
 .password-wrapper {
   position: relative;
 }

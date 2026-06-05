@@ -104,6 +104,41 @@ class ChatPersistence:
             row = cur.fetchone()
             return dict(row) if row else None
 
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Lấy user theo email (kèm hashed_password để phục vụ đăng nhập)."""
+        with self._cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, email, full_name, hashed_password, role,
+                       question_limit, is_active, created_at
+                FROM users WHERE email = %s
+                """,
+                (email,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    def create_user(
+        self,
+        email: str,
+        full_name: Optional[str],
+        hashed_password: str,
+        role: str = "user",
+        question_limit: Optional[int] = 50,
+    ) -> Dict[str, Any]:
+        """Tạo user mới. Raise nếu email đã tồn tại (UNIQUE constraint)."""
+        user_id = uuid.uuid4()
+        with self._cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO users (id, email, full_name, hashed_password, role, question_limit)
+                VALUES (%s, %s, %s, %s, %s::user_role, %s)
+                RETURNING id, email, full_name, role, question_limit, is_active, created_at
+                """,
+                (user_id, email, full_name, hashed_password, role, question_limit),
+            )
+            return dict(cur.fetchone())
+
     # Conversations
 
     def create_conversation(

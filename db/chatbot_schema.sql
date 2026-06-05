@@ -23,6 +23,7 @@ CREATE TABLE users (
     full_name       VARCHAR(255),
     hashed_password VARCHAR(255) NOT NULL,
     role            user_role    NOT NULL DEFAULT 'user',
+    question_limit  INTEGER,                          -- NULL = không giới hạn (unlimited)
     is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()

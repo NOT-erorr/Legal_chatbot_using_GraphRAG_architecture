@@ -1,0 +1,70 @@
+name: Deploy Frontend (GitHub Pages)
+
+# Build React/Vite SPA và publish lên GitHub Pages (miễn phí).
+# Cần bật: Settings → Pages → Build and deployment → Source = "GitHub Actions".
+# Cần repo Variable BACKEND_URL = URL Cloud Run (từ workflow deploy-backend).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Chỉ chạy 1 deploy Pages tại một thời điểm.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          # URL backend Cloud Run; rỗng → API gọi same-origin (sẽ fail trên Pages).
+          VITE_API_URL: ${{ vars.BACKEND_URL }}
+          # Subpath GitHub Pages: https://<user>.github.io/<repo>/
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - name: SPA fallback (404.html = index.html)
+        run: cp dist/index.html dist/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
