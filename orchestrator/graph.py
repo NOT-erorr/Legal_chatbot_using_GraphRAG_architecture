@@ -140,9 +140,9 @@ def _make_gemini_caller(cfg: OrchestratorConfig):
                 _cache["provider"] = "legacy"
         return _cache["client"], _cache["provider"]
 
-    def call(prompt: str) -> str:
+    def call(prompt: str, thinking_budget: Optional[int] = None) -> str:
         client, provider = _get_client()
-        return _call_gemini(client, provider, cfg, prompt)
+        return _call_gemini(client, provider, cfg, prompt, thinking_budget)
 
     return call
 
@@ -154,7 +154,10 @@ def _make_classify_node(cfg: OrchestratorConfig, gemini_call):
         question = state["question"]
         t0 = time.perf_counter()
         try:
-            result = classify_intent(question, llm_caller=gemini_call)
+            # Phân loại intent không cần suy luận → thinking=0 cho nhanh.
+            result = classify_intent(
+                question, llm_caller=lambda p: gemini_call(p, thinking_budget=0)
+            )
         except Exception as exc:
             print(f"[classify] error: {exc} → fallback general_qa")
             result = None
@@ -269,9 +272,10 @@ def _make_synthesize_node(cfg: OrchestratorConfig, gemini_call):
         t0 = time.perf_counter()
 
         prompt = _build_prompt_for_intent(intent, question, context)
+        budget = _thinking_budget_for_intent(cfg, intent)
 
         try:
-            answer = gemini_call(prompt)
+            answer = gemini_call(prompt, thinking_budget=budget)
         except Exception as exc:
             answer = (
                 f"[Lỗi khi gọi LLM: {exc}]\n\n"
@@ -293,6 +297,7 @@ def _make_synthesize_node(cfg: OrchestratorConfig, gemini_call):
                 **prev,
                 "synthesize_ms": synth_ms,
                 "model": cfg.gemini_chat_model,
+                "thinking_budget": budget,
                 "total_ms": round(stage_ms + synth_ms, 1),
             },
         }
@@ -589,20 +594,39 @@ def _warn_if_truncated(response: Any) -> None:
         pass
 
 
-def _gen_config(cfg: OrchestratorConfig) -> Dict[str, Any]:
-    """Build generation config dùng chung. Thêm thinking_config để tách ngân sách
-    token suy luận khỏi token trả lời (Gemini 2.5)."""
+def _gen_config(
+    cfg: OrchestratorConfig, thinking_budget: Optional[int] = None
+) -> Dict[str, Any]:
+    """Build generation config dùng chung. `thinking_budget` override cho phép đặt
+    ngân sách suy luận theo từng intent (None = dùng cfg.gemini_thinking_budget)."""
+    budget = cfg.gemini_thinking_budget if thinking_budget is None else thinking_budget
     config: Dict[str, Any] = {
         "temperature": cfg.gemini_temperature,
         "max_output_tokens": cfg.gemini_max_output_tokens,
     }
     # thinking_budget < 0 → để model tự quyết (không set, dùng dynamic mặc định).
-    if cfg.gemini_thinking_budget >= 0:
-        config["thinking_config"] = {"thinking_budget": cfg.gemini_thinking_budget}
+    if budget >= 0:
+        config["thinking_config"] = {"thinking_budget": budget}
     return config
 
 
-def _call_gemini(client: Any, provider: str, cfg: OrchestratorConfig, prompt: str) -> str:
+# Ngân sách "thinking" theo intent: nhóm cần suy luận/cấu trúc (giải thích, tóm tắt,
+# so sánh) giữ ngân sách đầy đủ để không giảm chất lượng/accuracy; nhóm tra cứu
+# (general_qa) và chỉ-format (list_related) đặt 0 để cắt ~5-7s latency.
+_REASONING_INTENTS = {Intent.EXPLAIN_ARTICLE, Intent.SUMMARIZE_DOC, Intent.COMPARE}
+
+
+def _thinking_budget_for_intent(cfg: OrchestratorConfig, intent: str) -> int:
+    return cfg.gemini_thinking_budget if intent in _REASONING_INTENTS else 0
+
+
+def _call_gemini(
+    client: Any,
+    provider: str,
+    cfg: OrchestratorConfig,
+    prompt: str,
+    thinking_budget: Optional[int] = None,
+) -> str:
     """Gọi Gemini API để sinh câu trả lời."""
     fallback_models = ["gemini-2.5-flash"]
     model_candidates = [cfg.gemini_chat_model, *fallback_models]
@@ -611,7 +635,7 @@ def _call_gemini(client: Any, provider: str, cfg: OrchestratorConfig, prompt: st
         if m and m not in deduped_models:
             deduped_models.append(m)
 
-    gen_config = _gen_config(cfg)
+    gen_config = _gen_config(cfg, thinking_budget)
 
     if provider == "google_genai":
         last_exc: Optional[Exception] = None
