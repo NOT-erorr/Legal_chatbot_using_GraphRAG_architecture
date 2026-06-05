@@ -5,7 +5,7 @@ import { getToken } from './session';
 // Use VITE_API_URL if injected during build, else default to relative routing.
 // Trong Docker: VITE_API_URL="" → gọi /api/v1/... same-origin, nginx proxy sang backend.
 // Cloud Run/standalone: set VITE_API_URL=https://<backend-url> khi build.
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').trim().replace(/^['"]|['"]$/g, '');
 
 // Gắn Bearer token (nếu có) vào headers cho các endpoint cần xác thực.
 function authHeaders(extra = {}) {

@@ -4,7 +4,8 @@ import LegalAPI from '../services/api';
 import { persistSession } from '../services/session';
 import './Login.css';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
+// Strip dấu nháy bao quanh nếu secret lỡ lưu kèm '...' / "..."
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '').trim().replace(/^['"]|['"]$/g, '');
 
 function Register() {
   const navigate = useNavigate();
