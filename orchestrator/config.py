@@ -18,7 +18,12 @@ except ImportError:
 
 
 def _env(name: str, default: str = "") -> str:
-    return os.getenv(name, default).strip()
+    val = os.getenv(name, default).strip()
+    # Phòng thủ: nếu secret lỡ được lưu kèm dấu nháy bao quanh ('...' hoặc "..."),
+    # bỏ cặp nháy đó đi (lỗi rất hay gặp khi set GitHub Secret / .env).
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+        val = val[1:-1].strip()
+    return val
 
 
 def _env_int(name: str, default: int) -> int:
