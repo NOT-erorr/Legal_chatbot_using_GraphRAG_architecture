@@ -49,8 +49,9 @@ jobs:
           # Google OAuth Client ID — frontend cần lúc build để render nút Sign-in.
           # (Không bí mật: client ID vốn nhúng công khai trong bundle JS.)
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          # Subpath GitHub Pages: https://<user>.github.io/<repo>/
-          BASE_PATH: /${{ github.event.repository.name }}/
+          # Custom domain (legalai.aiclub.com) phục vụ ở ROOT → base "/".
+          # (Nếu bỏ custom domain, dùng subpath github.io: /${{ github.event.repository.name }}/)
+          BASE_PATH: /
         run: npm run build
 
       - name: SPA fallback (404.html = index.html)
