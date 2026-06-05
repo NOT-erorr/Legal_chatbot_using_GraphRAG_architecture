@@ -214,7 +214,7 @@ export default function Chat() {
       <p>Tôi có thể giúp bạn tra cứu và giải thích các quy định pháp luật về thuế của Việt Nam dựa trên hơn 20,000 văn bản pháp lý về thuế chính thức.</p>
 
       <div className="welcome-topics">
-        <div className="topic-card" onClick={() => handleSend("Cách tính thuế thu nhập cá nhân từ tiền lương năm 2024?")}>
+        <div className="topic-card" onClick={() => handleSend("Cách tính thuế thu nhập cá nhân từ tiền lương")}>
           <div className="topic-card-title">💼 Thuế TNCN</div>
           <div className="topic-card-desc">Biểu thuế, giảm trừ, quyết toán</div>
         </div>
