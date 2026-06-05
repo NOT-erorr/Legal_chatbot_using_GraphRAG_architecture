@@ -1,4 +1,5 @@
 .env
+.env.*
 __pycache__/
 *.pyc
 .venv/
@@ -6,3 +7,10 @@ venv/
 .git/
 .vscode/
 scratch/
+
+# Dev / test / docs — không cần trong image runtime (giữ trong repo cho CI/eval)
+tests/
+requirements-dev.txt
+*.example
+README.md
+cloudbuild.yaml
